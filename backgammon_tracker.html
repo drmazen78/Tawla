@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🎲 طاولة مازن وطالب</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 8px;
+        }
+        .app { display: flex; width: 100%; min-height: calc(100vh - 60px); gap: 6px; }
+        .side { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            padding: 10px; 
+            background: rgba(255,255,255,0.95); 
+            border-radius: 16px; 
+            position: relative; 
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .side.disaster { animation: screenShake 0.15s ease-in-out infinite; }
+        @keyframes screenShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+        
+        .build-area { position: relative; width: 100%; height: 260px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 8px; padding-bottom: 5px; }
+        .building { display: flex; flex-direction: column; align-items: center; transition: transform 0.3s; }
+        .building.collapse { animation: buildingCollapse 2s ease-in forwards; }
+        @keyframes buildingCollapse { 
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            20% { transform: translateY(10px) rotate(-2deg); }
+            40% { transform: translateY(30px) rotate(3deg); }
+            60% { transform: translateY(80px) rotate(-5deg) scaleY(0.7); }
+            80% { transform: translateY(150px) rotate(8deg) scaleY(0.4); }
+            100% { transform: translateY(250px) rotate(15deg) scaleY(0.1); opacity: 0; }
+        }
+        
+        .ground { width: 100px; height: 8px; background: linear-gradient(to bottom, #5F5E5A, #444441); border-radius: 2px; margin-top: 2px; }
+        .roof { width: 0; height: 0; border-left: 40px solid transparent; border-right: 40px solid transparent; border-bottom: 25px solid #854F0B; position: relative; margin-bottom: -2px; }
+        .roof::after { content: ''; position: absolute; top: 10px; left: -8px; width: 16px; height: 14px; background: #5F5E5A; border-radius: 2px; }
+        .floors-container { display: flex; flex-direction: column; }
+        .floor { width: 70px; height: 22px; background: #F1EFE8; border: 2px solid #888780; border-top: none; position: relative; display: flex; align-items: center; justify-content: center; }
+        .floor:first-of-type { border-top: 2px solid #888780; }
+        .floor.f0 { background: #D3D1C7; height: 22px; border-bottom-left-radius: 3px; border-bottom-right-radius: 3px; }
+        .floor.f0::before { content: ''; position: absolute; bottom: 2px; width: 14px; height: 16px; background: #5F5E5A; border-radius: 2px 2px 0 0; }
+        .floor.f0.ruined { background: #B4B2A9; border-color: #5F5E5A; border-style: dashed; }
+        .floor.f0.ruined::before { opacity: 0.5; }
+        .floor.f0.ruined::after { content: '💔'; position: absolute; font-size: 10px; top: -2px; right: 5px; }
+        .floor:not(.f0)::before { content: ''; position: absolute; right: 8px; top: 4px; width: 14px; height: 12px; border: 2px solid #5F5E5A; background: #B5D4F4; }
+        .floor:not(.f0)::after { content: ''; position: absolute; left: 8px; top: 4px; width: 14px; height: 12px; border: 2px solid #5F5E5A; background: #B5D4F4; }
+        .flr-label { position: absolute; left: -28px; font-size: 14px; font-weight: 600; color: #333; }
+        
+        .p1 .floor { border-color: #378ADD; }
+        .p1 .roof { border-bottom-color: #185FA5; }
+        .p1 .floor:not(.f0)::before, .p1 .floor:not(.f0)::after { background: #B5D4F4; border-color: #378ADD; }
+        .p2 .floor { border-color: #BA7517; }
+        .p2 .roof { border-bottom-color: #854F0B; }
+        .p2 .floor:not(.f0)::before, .p2 .floor:not(.f0)::after { background: #FAEEDA; border-color: #BA7517; }
+        
+        .total-floors { font-size: 28px; font-weight: 600; color: #333; margin-top: 8px; }
+        .sbox { width: 88%; background: #fff; border: 2px solid #ddd; border-radius: 12px; padding: 12px; text-align: center; margin-bottom: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .sval { font-size: 38px; font-weight: 600; color: #333; }
+        .slbl { font-size: 11px; color: #888; margin-top: 2px; }
+        
+        .addbtn { width: 88%; padding: 12px; font-size: 16px; font-weight: 600; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 10px; cursor: pointer; margin-bottom: 6px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+        .addbtn:active { transform: scale(0.98); }
+        .addbtn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .opts { display: none; width: 88%; gap: 6px; margin-bottom: 6px; }
+        .opts.show { display: flex; }
+        .obtn { flex: 1; padding: 10px 4px; font-size: 14px; font-weight: 600; border: 2px solid #ddd; background: #fff; border-radius: 10px; cursor: pointer; }
+        .obtn:active { background: #f0f0f0; transform: scale(0.98); }
+        
+        .actbtns { display: flex; width: 88%; gap: 6px; margin-bottom: 8px; }
+        .ubtn, .cbtn { flex: 1; padding: 10px; font-size: 14px; font-weight: 500; border-radius: 10px; cursor: pointer; border: none; }
+        .ubtn { background: #f0f0f0; color: #666; }
+        .cbtn { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: #fff; box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4); }
+        .cbtn.pulse { animation: pulse 0.8s infinite; }
+        @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+        
+        .pname { font-size: 20px; font-weight: 700; color: #333; margin-top: 4px; }
+        .p1 .pname { color: #378ADD; }
+        .p2 .pname { color: #BA7517; }
+        
+        .winmsg { width: 88%; padding: 10px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: #fff; border-radius: 10px; text-align: center; font-size: 14px; font-weight: 600; margin-bottom: 6px; display: none; }
+        .winmsg.show { display: block; animation: bounceIn 0.5s; }
+        @keyframes bounceIn { 0%{transform:scale(0)} 50%{transform:scale(1.1)} 100%{transform:scale(1)} }
+        
+        .hbtn { display: block; margin: 12px auto; padding: 12px 24px; font-size: 14px; font-weight: 600; background: rgba(255,255,255,0.9); border: none; border-radius: 10px; cursor: pointer; color: #333; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+        .modal.show { display: flex; }
+        .mcont { background: #fff; border-radius: 16px; padding: 20px; width: 92%; max-width: 400px; max-height: 80%; overflow-y: auto; }
+        .mtitle { font-size: 18px; font-weight: 700; margin-bottom: 16px; text-align: center; color: #333; }
+        .mclose { width: 100%; padding: 12px; margin-top: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; }
+        .drec { padding: 12px; border-bottom: 1px solid #eee; }
+        .ddate { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 6px; }
+        .dgames { font-size: 13px; color: #666; line-height: 1.6; }
+        .wtag { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; margin-top: 6px; }
+        .wm { background: #E6F1FB; color: #0C447C; }
+        .wt { background: #FAEEDA; color: #633806; }
+        
+        .disaster-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; display: none; }
+        .disaster-overlay.show { display: block; }
+        .falling-debris { position: absolute; font-size: 22px; animation: fall linear forwards; }
+        @keyframes fall { 0%{transform:translateY(-20px) rotate(0deg);opacity:1} 100%{transform:translateY(500px) rotate(720deg);opacity:0} }
+        .explosion { position: absolute; font-size: 35px; animation: explode 0.8s ease-out forwards; }
+        @keyframes explode { 0%{transform:scale(0);opacity:1} 50%{transform:scale(1.5);opacity:1} 100%{transform:scale(2);opacity:0} }
+        .smoke { position: absolute; width: 50px; height: 50px; background: radial-gradient(circle, rgba(80,80,80,0.7) 0%, transparent 70%); border-radius: 50%; animation: smokeRise 2s ease-out forwards; }
+        @keyframes smokeRise { 0%{transform:translateY(0) scale(1);opacity:0.8} 100%{transform:translateY(-120px) scale(2.5);opacity:0} }
+        .fire { position: absolute; font-size: 28px; animation: flicker 0.2s ease-in-out infinite alternate; }
+        @keyframes flicker { 0%{transform:scale(1) rotate(-5deg)} 100%{transform:scale(1.2) rotate(5deg)} }
+        .rubble { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); font-size: 30px; display: none; }
+        .rubble.show { display: block; animation: rubbleAppear 0.3s ease-out forwards; }
+        @keyframes rubbleAppear { 0%{transform:translateX(-50%) scale(0)} 100%{transform:translateX(-50%) scale(1)} }
+        
+        .win-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; display: none; }
+        .win-overlay.show { display: block; }
+        .confetti { position: absolute; width: 12px; height: 12px; animation: confettiFall linear forwards; }
+        @keyframes confettiFall { 0%{transform:translateY(-20px) rotate(0deg)} 100%{transform:translateY(500px) rotate(1080deg)} }
+        .trophy { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 70px; animation: trophyBounce 0.6s ease-in-out infinite; }
+        @keyframes trophyBounce { 0%,100%{transform:translate(-50%,-50%) scale(1) rotate(-5deg)} 50%{transform:translate(-50%,-60%) scale(1.2) rotate(5deg)} }
+        .firework { position: absolute; font-size: 40px; animation: fireworkPop 1s ease-out forwards; }
+        @keyframes fireworkPop { 0%{transform:scale(0);opacity:0} 15%{transform:scale(1.2);opacity:1} 100%{transform:scale(1.8);opacity:0} }
+        .winner-text { position: absolute; top: 25%; left: 50%; transform: translateX(-50%); font-size: 20px; font-weight: bold; color: #f5576c; text-align: center; animation: textGlow 0.3s ease-in-out infinite alternate; text-shadow: 0 0 10px gold; }
+        @keyframes textGlow { 0%{text-shadow:0 0 10px gold,0 0 20px orange} 100%{text-shadow:0 0 25px gold,0 0 40px orange,0 0 60px red} }
+        
+        .skip-btn { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); padding: 10px 20px; background: rgba(255,255,255,0.95); border: none; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; z-index: 50; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <div class="side p1" id="side-m">
+        <div class="build-area">
+            <div class="building" id="mb"></div>
+            <div class="rubble" id="mrubble">🧱🪨💨</div>
+        </div>
+        <div class="total-floors">الطابق: <span id="mfloor">0</span></div>
+        <div class="sbox">
+            <div class="sval" id="ms">0</div>
+            <div class="slbl">نقاط البرتية</div>
+        </div>
+        <div class="winmsg" id="mwin">🎉 مبروك مازن! اضغط تثبيت</div>
+        <button class="addbtn" id="madd" onclick="tog('m')">+ أضف</button>
+        <div class="opts" id="mo">
+            <button class="obtn" onclick="add('m',1)">1</button>
+            <button class="obtn" onclick="add('m',2)">2</button>
+            <button class="obtn" onclick="add('m',5)">خشب</button>
+        </div>
+        <div class="actbtns">
+            <button class="ubtn" onclick="undo('m')">تراجع</button>
+            <button class="cbtn" id="mcnf" onclick="conf('m')">تثبيت</button>
+        </div>
+        <div class="pname">مازن</div>
+        <div class="disaster-overlay" id="mdisaster"></div>
+        <div class="win-overlay" id="mwin-overlay"></div>
+        <button class="skip-btn" id="mskip" style="display:none" onclick="skipAnim()">تخطي ⏭️</button>
+    </div>
+
+    <div class="side p2" id="side-t">
+        <div class="build-area">
+            <div class="building" id="tb"></div>
+            <div class="rubble" id="trubble">🧱🪨💨</div>
+        </div>
+        <div class="total-floors">الطابق: <span id="tfloor">0</span></div>
+        <div class="sbox">
+            <div class="sval" id="ts">0</div>
+            <div class="slbl">نقاط البرتية</div>
+        </div>
+        <div class="winmsg" id="twin">🎉 مبروك طالب! اضغط تثبيت</div>
+        <button class="addbtn" id="tadd" onclick="tog('t')">+ أضف</button>
+        <div class="opts" id="to">
+            <button class="obtn" onclick="add('t',1)">1</button>
+            <button class="obtn" onclick="add('t',2)">2</button>
+            <button class="obtn" onclick="add('t',5)">خشب</button>
+        </div>
+        <div class="actbtns">
+            <button class="ubtn" onclick="undo('t')">تراجع</button>
+            <button class="cbtn" id="tcnf" onclick="conf('t')">تثبيت</button>
+        </div>
+        <div class="pname">طالب</div>
+        <div class="disaster-overlay" id="tdisaster"></div>
+        <div class="win-overlay" id="twin-overlay"></div>
+        <button class="skip-btn" id="tskip" style="display:none" onclick="skipAnim()">تخطي ⏭️</button>
+    </div>
+</div>
+
+<button class="hbtn" onclick="showH()">📊 السجل الشهري</button>
+
+<div class="modal" id="hmod">
+    <div class="mcont">
+        <div class="mtitle">📊 السجل الشهري</div>
+        <div id="hcont"></div>
+        <button class="mclose" onclick="closeH()">إغلاق</button>
+    </div>
+</div>
+
+<script>
+var st = {
+    m: { s: 0, f: 0, h: [], lost: false },
+    t: { s: 0, f: 0, h: [], lost: false },
+    tg: [],
+    mr: [],
+    pending: null
+};
+var cm = new Date().getMonth();
+var animTimeout = null;
+var animIntervals = [];
+
+function load() {
+    var sv = localStorage.getItem('bg_tawla');
+    if (sv) {
+        var p = JSON.parse(sv);
+        if (p.mo === cm) {
+            st = p.st;
+            if (!st.pending) st.pending = null;
+            if (st.m.lost === undefined) st.m.lost = false;
+            if (st.t.lost === undefined) st.t.lost = false;
+        }
+    }
+    upd();
+}
+
+function save() {
+    localStorage.setItem('bg_tawla', JSON.stringify({ mo: cm, st: st }));
+}
+
+function tog(p) {
+    if (st.pending) return;
+    document.getElementById(p + 'o').classList.toggle('show');
+}
+
+function add(p, n) {
+    if (st.pending) return;
+    st[p].s += n;
+    st[p].h.push(n);
+    document.getElementById(p + 'o').classList.remove('show');
+    if (st[p].s >= 5) {
+        st.pending = p;
+        document.getElementById(p + 'win').classList.add('show');
+        document.getElementById(p + 'cnf').classList.add('pulse');
+        document.getElementById('madd').disabled = true;
+        document.getElementById('tadd').disabled = true;
+    }
+    upd();
+    save();
+}
+
+function undo(p) {
+    if (st.pending === p) {
+        st.pending = null;
+        document.getElementById(p + 'win').classList.remove('show');
+        document.getElementById(p + 'cnf').classList.remove('pulse');
+        document.getElementById('madd').disabled = false;
+        document.getElementById('tadd').disabled = false;
+    }
+    if (st[p].h.length > 0) {
+        st[p].s -= st[p].h.pop();
+        upd();
+        save();
+    }
+}
+
+function conf(p) {
+    if (st.pending === p) {
+        var w = p;
+        var l = w === 'm' ? 't' : 'm';
+        var loserHadFloors = st[l].f > 0;
+        st[w].f++;
+        st[l].f = 0;
+        st[l].lost = true;
+        st[w].lost = false;
+        st.tg.push({
+            w: w,
+            ws: st[w].s,
+            ls: st[l].s,
+            tm: new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })
+        });
+        st.m.s = 0;
+        st.t.s = 0;
+        st.m.h = [];
+        st.t.h = [];
+        st.pending = null;
+        document.getElementById(p + 'win').classList.remove('show');
+        document.getElementById(p + 'cnf').classList.remove('pulse');
+        document.getElementById('madd').disabled = true;
+        document.getElementById('tadd').disabled = true;
+
+        startWinCelebration(w);
+        if (loserHadFloors) {
+            startDisaster(l);
+        }
+
+        document.getElementById(w + 'skip').style.display = 'block';
+        if (loserHadFloors) document.getElementById(l + 'skip').style.display = 'block';
+
+        animTimeout = setTimeout(function() {
+            endAnimations();
+            upd();
+            saveD();
+            save();
+        }, 10000);
+    }
+}
+
+function startDisaster(p) {
+    var side = document.getElementById('side-' + p);
+    var overlay = document.getElementById(p + 'disaster');
+    var building = document.getElementById(p + 'b');
+    var rubble = document.getElementById(p + 'rubble');
+
+    side.classList.add('disaster');
+    overlay.classList.add('show');
+    building.classList.add('collapse');
+
+    setTimeout(function() {
+        rubble.classList.add('show');
+    }, 1800);
+
+    var debris = ['🧱', '💥', '🔥', '💨', '⚡', '🌋', '☄️', '🏚️', '💣', '🪨'];
+    var debrisInterval = setInterval(function() {
+        var d = document.createElement('div');
+        d.className = 'falling-debris';
+        d.textContent = debris[Math.floor(Math.random() * debris.length)];
+        d.style.left = Math.random() * 80 + 10 + '%';
+        d.style.animationDuration = (1 + Math.random() * 1.5) + 's';
+        overlay.appendChild(d);
+        setTimeout(function() { if (d.parentNode) d.remove(); }, 2500);
+    }, 100);
+    animIntervals.push(debrisInterval);
+
+    var explosionInterval = setInterval(function() {
+        var e = document.createElement('div');
+        e.className = 'explosion';
+        e.textContent = '💥';
+        e.style.left = Math.random() * 70 + 15 + '%';
+        e.style.top = Math.random() * 50 + 20 + '%';
+        overlay.appendChild(e);
+        setTimeout(function() { if (e.parentNode) e.remove(); }, 1000);
+    }, 400);
+    animIntervals.push(explosionInterval);
+
+    var smokeInterval = setInterval(function() {
+        var s = document.createElement('div');
+        s.className = 'smoke';
+        s.style.left = Math.random() * 80 + 10 + '%';
+        s.style.bottom = '80px';
+        overlay.appendChild(s);
+        setTimeout(function() { if (s.parentNode) s.remove(); }, 2500);
+    }, 300);
+    animIntervals.push(smokeInterval);
+
+    var fireInterval = setInterval(function() {
+        var f = document.createElement('div');
+        f.className = 'fire';
+        f.textContent = ['🔥', '🔥', '💥', '🌋'][Math.floor(Math.random() * 4)];
+        f.style.left = Math.random() * 80 + 10 + '%';
+        f.style.bottom = (50 + Math.random() * 80) + 'px';
+        overlay.appendChild(f);
+        setTimeout(function() { if (f.parentNode) f.remove(); }, 2000);
+    }, 150);
+    animIntervals.push(fireInterval);
+}
+
+function startWinCelebration(p) {
+    var overlay = document.getElementById(p + 'win-overlay');
+    var name = p === 'm' ? 'مازن' : 'طالب';
+
+    overlay.classList.add('show');
+
+    var trophy = document.createElement('div');
+    trophy.className = 'trophy';
+    trophy.textContent = '🏆';
+    overlay.appendChild(trophy);
+
+    var text = document.createElement('div');
+    text.className = 'winner-text';
+    text.innerHTML = '🎉 مبروك ' + name + '! 🎉<br>أنت البطل!';
+    overlay.appendChild(text);
+
+    var colors = ['#ff0', '#f0f', '#0ff', '#f00', '#0f0', '#00f', '#ffa500', '#ff69b4'];
+    var confettiInterval = setInterval(function() {
+        for (var i = 0; i < 5; i++) {
+            var c = document.createElement('div');
+            c.className = 'confetti';
+            c.style.left = Math.random() * 100 + '%';
+            c.style.background = colors[Math.floor(Math.random() * colors.length)];
+            c.style.animationDuration = (2 + Math.random() * 1.5) + 's';
+            c.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+            overlay.appendChild(c);
+            setTimeout(function() { if (c.parentNode) c.remove(); }, 4000);
+        }
+    }, 60);
+    animIntervals.push(confettiInterval);
+
+    var fireworks = ['🎆', '🎇', '✨', '🌟', '⭐', '💫', '🎊', '🎉'];
+    var fireworkInterval = setInterval(function() {
+        var fw = document.createElement('div');
+        fw.className = 'firework';
+        fw.textContent = fireworks[Math.floor(Math.random() * fireworks.length)];
+        fw.style.left = Math.random() * 80 + 10 + '%';
+        fw.style.top = Math.random() * 40 + 10 + '%';
+        overlay.appendChild(fw);
+        setTimeout(function() { if (fw.parentNode) fw.remove(); }, 1200);
+    }, 200);
+    animIntervals.push(fireworkInterval);
+}
+
+function skipAnim() {
+    endAnimations();
+    upd();
+    saveD();
+    save();
+}
+
+function endAnimations() {
+    if (animTimeout) { clearTimeout(animTimeout); animTimeout = null; }
+    animIntervals.forEach(function(i) { clearInterval(i); });
+    animIntervals = [];
+
+    document.getElementById('side-m').classList.remove('disaster');
+    document.getElementById('side-t').classList.remove('disaster');
+    document.getElementById('mdisaster').classList.remove('show');
+    document.getElementById('tdisaster').classList.remove('show');
+    document.getElementById('mwin-overlay').classList.remove('show');
+    document.getElementById('twin-overlay').classList.remove('show');
+    document.getElementById('mb').classList.remove('collapse');
+    document.getElementById('tb').classList.remove('collapse');
+    document.getElementById('mrubble').classList.remove('show');
+    document.getElementById('trubble').classList.remove('show');
+    document.getElementById('mdisaster').innerHTML = '';
+    document.getElementById('tdisaster').innerHTML = '';
+    document.getElementById('mwin-overlay').innerHTML = '';
+    document.getElementById('twin-overlay').innerHTML = '';
+    document.getElementById('mskip').style.display = 'none';
+    document.getElementById('tskip').style.display = 'none';
+    document.getElementById('madd').disabled = false;
+    document.getElementById('tadd').disabled = false;
+}
+
+function upd() {
+    document.getElementById('ms').textContent = st.m.s;
+    document.getElementById('ts').textContent = st.t.s;
+    document.getElementById('mfloor').textContent = st.m.f;
+    document.getElementById('tfloor').textContent = st.t.f;
+    bld('m', st.m.f, st.m.lost);
+    bld('t', st.t.f, st.t.lost);
+}
+
+function bld(p, floors, isLost) {
+    var b = document.getElementById(p + 'b');
+    var maxF = Math.min(floors, 10);
+    var h = '';
+    if (maxF > 0) {
+        h += '<div class="roof"></div>';
+    }
+    h += '<div class="floors-container">';
+    for (var i = maxF; i >= 1; i--) {
+        h += '<div class="floor"><span class="flr-label">' + i + '</span></div>';
+    }
+    var ruinedClass = isLost ? ' ruined' : '';
+    h += '<div class="floor f0' + ruinedClass + '"><span class="flr-label">0</span></div>';
+    h += '</div>';
+    h += '<div class="ground"></div>';
+    b.innerHTML = h;
+}
+
+function saveD() {
+    var td = new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    var dr = st.mr.find(function(r) { return r.d === td; });
+    if (!dr) { dr = { d: td, g: [] }; st.mr.push(dr); }
+    dr.g = st.tg.slice();
+}
+
+function showH() {
+    var c = document.getElementById('hcont');
+    if (st.mr.length === 0) {
+        c.innerHTML = '<p style="text-align:center;color:#888;padding:20px;">لا توجد سجلات بعد</p>';
+    } else {
+        var h = '';
+        st.mr.slice().reverse().forEach(function(d) {
+            var mw = d.g.filter(function(g) { return g.w === 'm'; }).length;
+            var tw = d.g.filter(function(g) { return g.w === 't'; }).length;
+            var lw = d.g.length > 0 ? d.g[d.g.length - 1].w : null;
+            h += '<div class="drec"><div class="ddate">' + d.d + '</div><div class="dgames">مازن: ' + mw + ' | طالب: ' + tw;
+            if (lw) h += '<br><span class="wtag ' + (lw === 'm' ? 'wm' : 'wt') + '">الفائز الأخير: ' + (lw === 'm' ? 'مازن' : 'طالب') + '</span>';
+            h += '</div></div>';
+        });
+        c.innerHTML = h;
+    }
+    document.getElementById('hmod').classList.add('show');
+}
+
+function closeH() {
+    document.getElementById('hmod').classList.remove('show');
+}
+
+load();
+</script>
+
+</body>
+</html>
